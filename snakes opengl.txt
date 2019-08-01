@@ -1,0 +1,215 @@
+
+#include <Windows.h>
+#include <GL\glew.h>
+#include <GL\freeglut.h>
+#include <iostream>
+#include <ctime>
+#include <stdlib.h>
+#include <string.h> 
+#define columns 40.0
+#define rows 40.0
+#define fps 10
+#define up 1
+#define down -1
+#define right 2
+#define left -2
+#define maxs 60
+
+//using namespace std;
+void displaycallback();
+void drawgrid();
+void unit(int,int);
+void timercallback(int);
+void keyb(int, int, int);
+void drawsnake();
+void drawfood();
+void random(int&, int& );
+
+
+int foodx, foody;
+int score=0;
+
+
+int gridx, gridy;
+int snake_length = 5;
+int posnx[60] = { 20,20,20,20,20 }, posny[60] = { 20,19,18,17,16 };
+short direcn = right;
+bool gameover=false;
+bool food = true;
+
+
+void initgrid(int x, int y) {
+	gridx = x;
+	gridy = y;
+}
+
+void init() {
+	initgrid(columns, rows);
+} 
+
+void reshapecallback(int w, int h)
+{
+	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(0.0, columns, 0.0, rows,-1.0,1.0);
+	glMatrixMode(GL_MODELVIEW);
+}
+
+void render()
+{
+}
+
+
+
+int main(int argc, char* argv[]) {
+
+	// Initialize GLUT
+	glutInit(&argc, argv);
+	// Set up some memory buffers for our display
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+	// Set the window size
+	glutInitWindowSize(500, 500);
+	// Create the window with the title "Hello,GL"
+	glutCreateWindow("Hello, GL");
+	// Bind the two functions (above) to respond when necessary
+	glutReshapeFunc(reshapecallback);
+	glutDisplayFunc(displaycallback);
+
+	// Very important!  This initializes the entry points in the OpenGL driver so we can 
+	// call all the functions in the API.
+	//GLenum err = glewInit();
+	//if (GLEW_OK != err) {
+		//fprintf(stderr, "GLEW error");
+	//	return 1;
+	//}
+	glutTimerFunc(0, timercallback, 0);
+	glutSpecialFunc(keyb);
+	init();
+
+	glutMainLoop();
+	return 0;
+}
+void displaycallback(){
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	drawgrid();
+	drawsnake();
+	drawfood();
+	glutSwapBuffers();
+	if (gameover) {
+		char sscore[10]="hello";
+		sprintf(sscore, "%d", score);
+		char Text[50] = "your score :";
+		strcat(Text, sscore);
+		MessageBox(NULL, Text, "gameover",0);
+		exit(0);
+	}
+	
+}
+
+void drawgrid()  {  
+	for (int x = 0; x < gridx; x++) {
+		for (int y = 0; y < gridy; y++) {
+			unit(x, y);
+		}
+	}
+}
+
+void unit(int x,int y) {
+	if(x==0||y==0||x==gridx-1||y==gridy-1){
+		glLineWidth(3.0);
+		glColor3f(1.0, 0.0, 0.0);
+
+	}
+	else {
+		glLineWidth(1.0);
+		glColor3f(1.0, 1.0, 1.0);
+	}
+	
+	glBegin(GL_LINE_LOOP);
+	glVertex2f(x, y);
+	glVertex2f(x + 1, y);
+	glVertex2f(x + 1, y + 1);
+	glVertex2f(x, y + 1);
+
+	glEnd();
+}
+void timercallback(int) {
+	glutPostRedisplay();
+	glutTimerFunc(1000 / fps, timercallback, 0);
+}
+void keyb(int key, int, int) {
+	switch (key)
+	{
+	case GLUT_KEY_UP:if (direcn != down) 
+		direcn = up;
+		break;
+	case GLUT_KEY_DOWN:if (direcn != up)
+		direcn = down;
+		break;
+	case GLUT_KEY_RIGHT:if (direcn != left)
+		direcn = right;
+		break;
+	case GLUT_KEY_LEFT:if (direcn != right)
+		direcn = left;
+		break;
+	default:
+		break;
+	}
+
+}
+void drawsnake() {
+
+	for (int i = snake_length - 1; i > 0;i--) {
+		posnx[i] = posnx[i - 1];
+		posny[i] = posny[i - 1];
+	}
+	if (direcn == up) {
+		posny[0]++;
+	}
+	else if (direcn == down) {
+		posny[0]--;
+	}
+	else if (direcn == right) {
+		posnx[0]++;
+	}
+	else if (direcn == left) {
+		posnx[0]--;
+	}
+	for (int i = 0; i < snake_length; i++) {
+		if (i == 0)
+			glColor3f(0.0, 1.0, 1.0);
+		else glColor3f(0.0, 0.0, 1.0);
+		glRectd(posnx[i], posny[i], posnx[i]+1, posny[i]+1);
+	}
+	if (posnx[0]== 0 || posnx[0] == gridx - 1 || posny[0] == 0 || posny[0] == gridy - 1) {
+		gameover = true;
+	}
+	if (posnx[0] == foodx && posny[0] == foody) {
+		score++;
+		snake_length++;
+		
+		if (snake_length > maxs)
+			snake_length = maxs;
+		food = true;
+	}
+}
+	void drawfood()
+	{
+		if (food) 
+			random(foodx, foody);
+			food = false;
+			glColor3f(1.0, 1.0, 0.0);
+			glRectf(foodx, foody, foodx + 1, foody + 1);
+		
+	}
+void random(int &x,int &y){
+	int maximx = gridx - 2;
+	int minimx = 1;
+	int maximy = gridy - 2;
+
+	srand(time(NULL));
+	x = minimx + rand() % (maximx - minimx);
+	y= minimx + rand() % (maximy- minimx);
+}
